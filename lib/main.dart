@@ -24,6 +24,13 @@ class _MyAppState extends State<MyApp> {
       _loggedIn = true;
     });
   }
+  void _onLogout() {
+    setState(() {
+      _loggedIn = false;
+      _showRegister = false;
+    });
+  }
+
 
   void _onShowRegister() {
     setState(() {
@@ -51,12 +58,16 @@ class _MyAppState extends State<MyApp> {
       }
     }
     return MaterialApp(
-      home: MainTabs(),
+      home: MainTabs(onLogout: _onLogout),
     );
+
   }
 }
 
 class MainTabs extends StatefulWidget {
+  final VoidCallback onLogout;
+  const MainTabs({super.key, required this.onLogout});
+
   @override
   State<MainTabs> createState() => _MainTabsState();
 }
@@ -64,19 +75,13 @@ class MainTabs extends StatefulWidget {
 class _MainTabsState extends State<MainTabs> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _pages = <Widget>[
-    HomePage(),
-    ProfilePage(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final List<Widget> _pages = <Widget>[
+      const HomePage(),
+      ProfilePage(onLogout: widget.onLogout),
+    ];
+
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -91,7 +96,7 @@ class _MainTabsState extends State<MainTabs> {
           ),
         ],
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (index) => setState(() => _selectedIndex = index),
       ),
     );
   }

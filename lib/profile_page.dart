@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  final VoidCallback onLogout;
+  const ProfilePage({super.key, required this.onLogout});
 
   @override
   Widget build(BuildContext context) {
@@ -57,8 +58,15 @@ class ProfilePage extends StatelessWidget {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {},
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          ListTile(
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            trailing: const Icon(Icons.logout, color: Colors.red),
+            onTap: onLogout,
+          ),
         ],
       ),
     );
   }
-} 
+}
