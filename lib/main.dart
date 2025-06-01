@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'login_page.dart';
 import 'register_page.dart';
 import 'home_page.dart';
 import 'profile_page.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  // init firebase
+  WidgetsFlutterBinding.ensureInitialized();
+   await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+   );
+
+   // init hive for local storage
+  await Hive.initFlutter();
+  var box = await Hive.openBox('userBox');
+
   runApp(const MyApp());
 }
 
