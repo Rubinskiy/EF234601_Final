@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class ProfilePage extends StatelessWidget {
   final VoidCallback onLogout;
@@ -22,9 +24,17 @@ class ProfilePage extends StatelessWidget {
                 child: Icon(Icons.person, size: 64, color: Colors.white),
               ),
               const SizedBox(height: 16),
-              const Text('Sophia Carter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              Text(
+                FirebaseAuth.instance.currentUser?.displayName ?? 'Anonymous',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+
               const SizedBox(height: 4),
-              const Text('sophia.carter@email.com', style: TextStyle(color: Colors.blueGrey)),
+              Text(
+                FirebaseAuth.instance.currentUser?.email ?? 'No email',
+                style: const TextStyle(color: Colors.blueGrey),
+              ),
+
             ],
           ),
           const SizedBox(height: 32),

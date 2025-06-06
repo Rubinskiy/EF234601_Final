@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'models/event_model.dart';
+import 'services/firestore_service.dart';
 
 class MyEventsPage extends StatefulWidget {
   const MyEventsPage({super.key});
@@ -11,7 +12,7 @@ class MyEventsPage extends StatefulWidget {
 }
 
 class _MyEventsPageState extends State<MyEventsPage> {
-  final _eventBox = Hive.box<EventModel>('events');
+  final _firestoreService = FirestoreService();
 
   void _showEventDialog({EventModel? event}) {
     final nameController = TextEditingController(text: event?.name);
@@ -38,29 +39,23 @@ class _MyEventsPageState extends State<MyEventsPage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final userId = FirebaseAuth.instance.currentUser?.uid;
               if (userId == null) return;
 
-              final newEvent = EventModel(
-                name: nameController.text,
-                description: descController.text,
-                dateTime: dateTimeController.text,
-                location: locationController.text,
-                organizers: organizerController.text,
-                createdBy: userId,
-              );
+              final data = {
+                'name': nameController.text,
+                'description': descController.text,
+                'dateTime': dateTimeController.text,
+                'location': locationController.text,
+                'organizers': organizerController.text,
+                'createdBy': userId,
+              };
 
               if (event == null) {
-                _eventBox.add(newEvent);
+                await _firestoreService.addEvent(data);
               } else {
-                event
-                  ..name = newEvent.name
-                  ..description = newEvent.description
-                  ..dateTime = newEvent.dateTime
-                  ..location = newEvent.location
-                  ..organizers = newEvent.organizers
-                  ..save();
+                await _firestoreService.updateEvent(event.id, data);
               }
 
               Navigator.pop(context);
@@ -72,17 +67,17 @@ class _MyEventsPageState extends State<MyEventsPage> {
     );
   }
 
-  void _confirmDelete(EventModel event) {
+  void _confirmDelete(String id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Event"),
-        content: Text("Are you sure you want to delete ${event.name}?"),
+        content: const Text("Are you sure you want to delete this event?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
-            onPressed: () {
-              event.delete();
+            onPressed: () async {
+              await _firestoreService.deleteEvent(id);
               Navigator.pop(context);
             },
             child: const Text("Delete"),
@@ -95,32 +90,33 @@ class _MyEventsPageState extends State<MyEventsPage> {
   @override
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      return const Center(child: Text("Not logged in"));
-    }
+
+    if (userId == null) return const Center(child: Text("Not logged in"));
 
     return Scaffold(
       appBar: AppBar(title: const Text("My Events")),
-      body: ValueListenableBuilder(
-        valueListenable: _eventBox.listenable(),
-        builder: (context, Box<EventModel> box, _) {
-          final myEvents = box.values.where((e) => e.createdBy == userId).toList();
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestoreService.getUserEvents(userId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text("No events created."));
 
-          if (myEvents.isEmpty) {
-            return const Center(child: Text("You haven't created any events."));
-          }
+          final events = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return EventModel.fromMap(data, doc.id);
+          }).toList();
 
           return ListView.builder(
-            itemCount: myEvents.length,
+            itemCount: events.length,
             itemBuilder: (context, index) {
-              final event = myEvents[index];
+              final event = events[index];
               return ListTile(
                 title: Text(event.name),
                 subtitle: Text("${event.dateTime} | ${event.location}"),
                 onTap: () => _showEventDialog(event: event),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () => _confirmDelete(event),
+                  onPressed: () => _confirmDelete(event.id),
                 ),
               );
             },

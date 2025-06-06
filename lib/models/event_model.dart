@@ -1,28 +1,14 @@
-import 'package:hive/hive.dart';
-
-part 'event_model.g.dart';
-
-@HiveType(typeId: 0)
-class EventModel extends HiveObject {
-  @HiveField(0)
-  String name;
-
-  @HiveField(1)
-  String description;
-
-  @HiveField(2)
-  String dateTime;
-
-  @HiveField(3)
-  String location;
-
-  @HiveField(4)
-  String organizers;
-
-  @HiveField(5)
-  String createdBy;
+class EventModel {
+  final String id;
+  final String name;
+  final String description;
+  final String dateTime;
+  final String location;
+  final String organizers;
+  final String createdBy;
 
   EventModel({
+    required this.id,
     required this.name,
     required this.description,
     required this.dateTime,
@@ -30,4 +16,27 @@ class EventModel extends HiveObject {
     required this.organizers,
     required this.createdBy,
   });
+
+  factory EventModel.fromMap(Map<String, dynamic> map, String id) {
+    return EventModel(
+      id: id,
+      name: map['name'],
+      description: map['description'],
+      dateTime: map['dateTime'],
+      location: map['location'],
+      organizers: map['organizers'],
+      createdBy: map['createdBy'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'description': description,
+      'dateTime': dateTime,
+      'location': location,
+      'organizers': organizers,
+      'createdBy': createdBy,
+    };
+  }
 }

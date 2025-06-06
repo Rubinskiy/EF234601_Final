@@ -17,11 +17,10 @@ void main() async {
   );
 
   await Hive.initFlutter();
-  Hive.registerAdapter(EventModelAdapter());
-  await Hive.openBox<EventModel>('events');
 
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
