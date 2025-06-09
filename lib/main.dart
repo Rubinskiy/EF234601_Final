@@ -103,6 +103,7 @@ class _MainTabsState extends State<MainTabs> {
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          // it should either be called "My Events" or "Events"
           BottomNavigationBarItem(icon: Icon(Icons.event_note), label: 'My Events'), // ✅ Tambah ini
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

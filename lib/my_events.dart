@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'models/event_model.dart';
 import 'services/firestore_service.dart';
+import 'create_event_page.dart';
 
 class MyEventsPage extends StatefulWidget {
   const MyEventsPage({super.key});
@@ -13,59 +14,6 @@ class MyEventsPage extends StatefulWidget {
 
 class _MyEventsPageState extends State<MyEventsPage> {
   final _firestoreService = FirestoreService();
-
-  void _showEventDialog({EventModel? event}) {
-    final nameController = TextEditingController(text: event?.name);
-    final descController = TextEditingController(text: event?.description);
-    final dateTimeController = TextEditingController(text: event?.dateTime);
-    final locationController = TextEditingController(text: event?.location);
-    final organizerController = TextEditingController(text: event?.organizers);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(event == null ? "Create Event" : "Edit Event"),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: "Event Name")),
-              TextField(controller: descController, decoration: const InputDecoration(labelText: "Description")),
-              TextField(controller: dateTimeController, decoration: const InputDecoration(labelText: "Date & Time")),
-              TextField(controller: locationController, decoration: const InputDecoration(labelText: "Location")),
-              TextField(controller: organizerController, decoration: const InputDecoration(labelText: "Organizers")),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () async {
-              final userId = FirebaseAuth.instance.currentUser?.uid;
-              if (userId == null) return;
-
-              final data = {
-                'name': nameController.text,
-                'description': descController.text,
-                'dateTime': dateTimeController.text,
-                'location': locationController.text,
-                'organizers': organizerController.text,
-                'createdBy': userId,
-              };
-
-              if (event == null) {
-                await _firestoreService.addEvent(data);
-              } else {
-                await _firestoreService.updateEvent(event.id, data);
-              }
-
-              Navigator.pop(context);
-            },
-            child: Text(event == null ? "Create" : "Update"),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _confirmDelete(String id) {
     showDialog(
@@ -112,8 +60,7 @@ class _MyEventsPageState extends State<MyEventsPage> {
               final event = events[index];
               return ListTile(
                 title: Text(event.name),
-                subtitle: Text("${event.dateTime} | ${event.location}"),
-                onTap: () => _showEventDialog(event: event),
+                subtitle: Text("${event.date} | ${event.location}"),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => _confirmDelete(event.id),
@@ -124,7 +71,13 @@ class _MyEventsPageState extends State<MyEventsPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showEventDialog(),
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateEventPage()),
+          );
+          setState(() {}); // Refresh after returning
+        },
         child: const Icon(Icons.add),
       ),
     );

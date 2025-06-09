@@ -2,7 +2,9 @@ class EventModel {
   final String id;
   final String name;
   final String description;
-  final String dateTime;
+  final String date;
+  final String time;
+  final String imageUrl;
   final String location;
   final String organizers;
   final String createdBy;
@@ -11,7 +13,9 @@ class EventModel {
     required this.id,
     required this.name,
     required this.description,
-    required this.dateTime,
+    required this.date,
+    required this.time,
+    this.imageUrl = '',
     required this.location,
     required this.organizers,
     required this.createdBy,
@@ -22,7 +26,9 @@ class EventModel {
       id: id,
       name: map['name'],
       description: map['description'],
-      dateTime: map['dateTime'],
+      date: map['date'],
+      time: map['time'],
+      imageUrl: map['imageUrl'] ?? '',
       location: map['location'],
       organizers: map['organizers'],
       createdBy: map['createdBy'],
@@ -33,7 +39,9 @@ class EventModel {
     return {
       'name': name,
       'description': description,
-      'dateTime': dateTime,
+      'date': date,
+      'time': time,
+      'imageUrl': imageUrl,
       'location': location,
       'organizers': organizers,
       'createdBy': createdBy,
