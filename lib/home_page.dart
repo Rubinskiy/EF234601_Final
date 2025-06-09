@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: StreamBuilder<QuerySnapshot>(
-          stream: eventsRef.orderBy('dateTime').snapshots(),
+          stream: eventsRef.orderBy('date', descending: true).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -98,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                                   color: const Color(0xFFE8F0FE),
                                 ),
                                 child: Text(
-                                  event.dateTime,
+                                  event.date,
                                   style: const TextStyle(fontSize: 13, color: Colors.blue),
                                 ),
                               ),
