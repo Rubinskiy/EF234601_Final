@@ -18,7 +18,9 @@ Week 1 is dedicated to preliminary research on what our ideas are for the app an
 These generated designs are purely for inspiration to mimic on our app. View the Figma workspace [here](https://www.figma.com/design/DRmUTiWiIoZE97fiyTUSqu/Final-Project-Flutter-App?node-id=0-1&t=GTDP0aoBmJbs5yOo-1).
 
 ## Week 2
-Week 2 we started the development of the app and created the basic structure (auth using Firebase), implementation of UI from Figma
+Week 2 we started the development of the app and created the basic structure (auth using Firebase), implementation of UI from Figma.
 
 ## Week 3
 Week 3 is where we added Firestore to create our collection of events, and used CRUD to create them, display and delete. We also added the ability to edit events and add images which we store on a third-party S3-compatible platform called tebi.io.
+
+![image](https://github.com/user-attachments/assets/009d6cf8-4b02-44fa-8538-98708dd17214)
