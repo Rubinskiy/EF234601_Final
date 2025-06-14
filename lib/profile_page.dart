@@ -132,13 +132,13 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('My Profile'),
         automaticallyImplyLeading: false,
         actions: [
-          if (_isLoading)
+          if (_isLoading || _isUploadingImage) // Show indicator for general loading or image upload
             const Padding(
               padding: EdgeInsets.all(16.0),
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white,),
               ),
             ),
         ],
@@ -293,7 +293,8 @@ class _ProfilePageState extends State<ProfilePage> {
               child: ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
-                onTap: () => _showSnackBar('todo'),
+                // *** CHANGED THIS LINE ***
+                onTap: _showDeleteAccountDialog,
               ),
             ),
           ],
@@ -324,5 +325,72 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+
+  // Shows the confirmation dialog before deleting the account.
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+            'Are you sure you want to delete your account? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+              _deleteAccount(); // Proceed with deletion
+            },
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // Handles the logic for deleting the user account and data.
+  Future<void> _deleteAccount() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        _showSnackBar('No user is logged in.');
+        return;
+      }
+
+      final userId = user.uid;
+
+
+
+
+
+      // 1. Delete user document from Firestore
+      await _firestore.collection('users').doc(userId).delete();
+      print("User document deleted from Firestore.");
+
+      // 2. Delete the user from Firebase Authentication
+      // This is the final step and will sign the user out permanently.
+      await user.delete();
+      print("User deleted from Firebase Authentication.");
+
+      // The onLogout callback will handle navigation back to the login screen
+      if(mounted) widget.onLogout();
+
+    } catch (e) {
+      print("Error deleting account: $e");
+      // This error often happens if the user hasn't signed in recently.
+      _showSnackBar('Error deleting account. Please sign out and sign back in before trying again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }
