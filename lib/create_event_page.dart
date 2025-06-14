@@ -6,6 +6,7 @@ import 'dart:io';
 import 'services/firestore_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'services/cloudinary_service.dart';
 
 class CreateEventPage extends StatefulWidget {
   const CreateEventPage({super.key});
@@ -60,20 +61,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 
   Future<String?> _uploadImageToCloudinary(File imageFile) async {
-    const cloudName = 'dqfyez52e';
-    const uploadPreset = 'flutter_unsigned';
-    final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
-    final request = http.MultipartRequest('POST', url)
-      ..fields['upload_preset'] = uploadPreset
-      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
-    final response = await request.send();
-    if (response.statusCode == 200) {
-      final respStr = await response.stream.bytesToString();
-      final data = json.decode(respStr);
-      return data['secure_url'];
-    } else {
-      return null;
-    }
+    return await CloudinaryService.uploadImageToCloudinary(imageFile);
   }
 
   Future<void> _submit() async {
