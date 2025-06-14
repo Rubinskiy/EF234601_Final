@@ -141,6 +141,10 @@ class _HomePageState extends State<HomePage> {
                           )
                               : const Icon(Icons.image, size: 32, color: Colors.white),
                         ),
+                        TextButton(
+                          onPressed: () => throw Exception(),
+                          child: const Text("Throw Test Exception"),
+                        ),
                       ],
                     ),
                   ),
