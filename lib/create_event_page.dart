@@ -78,6 +78,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
         'location': _locationController.text.trim(),
         'organizers': _organizerController.text.trim(),
         'createdBy': userId,
+        'createdAt': DateTime.now().toIso8601String(),
       };
       await FirestoreService().addEvent(data);
       Navigator.pop(context);

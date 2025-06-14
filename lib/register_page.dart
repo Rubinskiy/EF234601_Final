@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'services/firestore_service.dart';
 
 class RegisterPage extends StatefulWidget {
   final VoidCallback onLoginTap;
@@ -21,12 +24,26 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  String _errorMessage = '';
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _register() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
     });
 
     try {
@@ -35,15 +52,23 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text.trim(),
       );
 
-      // Optionally you can store the name in Firebase displayName here
       User? user = FirebaseAuth.instance.currentUser;
       await user?.updateDisplayName(_nameController.text.trim());
 
-      widget.onRegister(); // Panggil callback untuk masuk ke home
+      if (user != null) {
+        FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'pfp_url': '',
+          'bio': '',
+          'createdAt': Timestamp.now(),
+        });
+      }
+
+      widget.onRegister();
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message ?? 'Registration failed';
-      });
+      _showErrorDialog(e.message ?? 'Registration failed');
     }
 
     setState(() {
@@ -78,9 +103,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   obscureText: true,
                   decoration: const InputDecoration(labelText: 'Password'),
                 ),
-                const SizedBox(height: 16),
-                if (_errorMessage.isNotEmpty)
-                  Text(_errorMessage, style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
