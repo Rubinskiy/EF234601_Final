@@ -138,7 +138,7 @@ class DetailsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 // card for organizers
-                const Text('Organizers', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
+                const Text('Main Organizer', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Card(
                   child: ListTile(
