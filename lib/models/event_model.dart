@@ -8,6 +8,7 @@ class EventModel {
   final String location;
   final String organizers;
   final String createdBy;
+  final String createdAt;
 
   EventModel({
     required this.id,
@@ -19,6 +20,7 @@ class EventModel {
     required this.location,
     required this.organizers,
     required this.createdBy,
+    required this.createdAt,
   });
 
   factory EventModel.fromMap(Map<String, dynamic> map, String id) {
@@ -32,6 +34,7 @@ class EventModel {
       location: map['location'],
       organizers: map['organizers'],
       createdBy: map['createdBy'],
+      createdAt: map['createdAt'],
     );
   }
 
@@ -45,6 +48,7 @@ class EventModel {
       'location': location,
       'organizers': organizers,
       'createdBy': createdBy,
+      'createdAt': createdAt,
     };
   }
 }

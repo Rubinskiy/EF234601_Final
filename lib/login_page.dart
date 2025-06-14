@@ -16,12 +16,26 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  String _errorMessage = '';
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _signIn() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
     });
 
     try {
@@ -30,11 +44,9 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
 
-      widget.onLogin(); // Beri tahu parent kalau login sukses
+      widget.onLogin();
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message ?? 'Login failed';
-      });
+      _showErrorDialog(e.message ?? 'Login failed');
     }
 
     setState(() {
@@ -64,9 +76,6 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
                 ),
-                const SizedBox(height: 16),
-                if (_errorMessage.isNotEmpty)
-                  Text(_errorMessage, style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
