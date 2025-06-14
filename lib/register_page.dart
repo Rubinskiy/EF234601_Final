@@ -62,6 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'email': _emailController.text.trim(),
           'pfp_url': '',
           'bio': '',
+          'emailNotifications': true,
           'createdAt': Timestamp.now(),
         });
       }

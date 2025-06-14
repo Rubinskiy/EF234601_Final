@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'edit_profile_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
@@ -17,6 +21,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   bool _isLoading = false;
   Map<String, dynamic> _userProfile = {};
+  File? _pickedImage;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -70,6 +76,53 @@ class _ProfilePageState extends State<ProfilePage> {
         : fallback;
   }
 
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _pickedImage = File(picked.path));
+      await _uploadProfileImage();
+    }
+  }
+
+  Future<void> _uploadProfileImage() async {
+    if (_pickedImage == null) return;
+    setState(() => _isUploadingImage = true);
+    try {
+      final url = await _uploadImageToCloudinary(_pickedImage!);
+      if (url != null) {
+        final user = _auth.currentUser;
+        if (user != null) {
+          await _firestore.collection('users').doc(user.uid).update({'pfp_url': url});
+          setState(() => _userProfile['pfp_url'] = url);
+        }
+      } else {
+        _showSnackBar('Failed to upload image.');
+      }
+    } catch (e) {
+      _showSnackBar('Image upload error: $e');
+    } finally {
+      setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<String?> _uploadImageToCloudinary(File imageFile) async {
+    const cloudName = 'dqfyez52e';
+    const uploadPreset = 'flutter_unsigned';
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final respStr = await response.stream.bytesToString();
+      final data = json.decode(respStr);
+      return data['secure_url'];
+    } else {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
@@ -100,24 +153,46 @@ class _ProfilePageState extends State<ProfilePage> {
             // Profile Header
             Column(
               children: [
-                CircleAvatar(
-                  radius: 48,
-                  backgroundColor: Colors.orange,
-                  backgroundImage: _userProfile['photoURL'] != null && _userProfile['photoURL'].toString().isNotEmpty
-                      ? NetworkImage(_userProfile['photoURL'])
-                      : null,
-                  child: _userProfile['photoURL'] == null || _userProfile['photoURL'].toString().isEmpty
-                      ? const Icon(Icons.person, size: 64, color: Colors.white)
-                      : null,
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 48,
+                      backgroundColor: Colors.orange,
+                      backgroundImage: _userProfile['pfp_url'] != null && _userProfile['pfp_url'].toString().isNotEmpty
+                          ? NetworkImage(_userProfile['pfp_url'])
+                          : null,
+                      child: _userProfile['pfp_url'] == null || _userProfile['pfp_url'].toString().isEmpty
+                          ? const Icon(Icons.person, size: 64, color: Colors.white)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _isUploadingImage ? null : _pickProfileImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: _isUploadingImage
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _getDisplayValue('displayName', user?.displayName ?? 'Anonymous'),
+                  _getDisplayValue('name', user?.displayName ?? 'Anonymous'),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user?.email ?? 'No email',
+                  _getDisplayValue('email', user?.email ?? 'No email'),
                   style: const TextStyle(color: Colors.blueGrey),
                 ),
                 if (_userProfile['bio'] != null && _userProfile['bio'].toString().isNotEmpty)
@@ -127,6 +202,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       _userProfile['bio'],
                       style: const TextStyle(color: Colors.grey, fontSize: 14),
                       textAlign: TextAlign.center,
+                    ),
+                  ),
+                if (_userProfile['createdAt'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Joined: ' + (_userProfile['createdAt'] is String
+                          ? _userProfile['createdAt']
+                          : (_userProfile['createdAt']?.toDate().toString().split(' ')[0] ?? '')),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ),
               ],
@@ -160,7 +245,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     subtitle: const Text('Receive updates via email'),
                     value: _userProfile['emailNotifications'] ?? true,
                     onChanged: (value) {
-                      // This logic can stay here or be moved to a dedicated settings page
+                      _firestore.collection('users').doc(user?.uid).update({'emailNotifications': value});
+                      setState(() => _userProfile['emailNotifications'] = value);
                     },
                   ),
                   // ... other preference items
@@ -188,7 +274,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 8),
 
             // Logout Section
             Card(
@@ -197,6 +283,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
                 onTap: () => _showLogoutDialog(),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // request to delete account
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                onTap: () => _showSnackBar('todo'),
               ),
             ),
           ],

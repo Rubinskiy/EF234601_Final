@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'services/firestore_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CreateEventPage extends StatefulWidget {
   const CreateEventPage({super.key});
@@ -25,6 +27,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
   bool _agreed = false;
   bool _isLoading = false;
   String? _error;
+  bool _isUploadingImage = false;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -56,6 +59,23 @@ class _CreateEventPageState extends State<CreateEventPage> {
     }
   }
 
+  Future<String?> _uploadImageToCloudinary(File imageFile) async {
+    const cloudName = 'dqfyez52e';
+    const uploadPreset = 'flutter_unsigned';
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final respStr = await response.stream.bytesToString();
+      final data = json.decode(respStr);
+      return data['secure_url'];
+    } else {
+      return null;
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || !_agreed || _selectedDate == null || _selectedTime == null) return;
     setState(() {
@@ -66,14 +86,21 @@ class _CreateEventPageState extends State<CreateEventPage> {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) throw Exception('Not logged in');
       String imageUrl = '';
-      // TODO: Upload image to storage and get URL if needed
-      // will do soon, gonna use tebi.io
+      if (_imageFile != null) {
+        setState(() => _isUploadingImage = true);
+        final uploadedUrl = await _uploadImageToCloudinary(_imageFile!);
+        setState(() => _isUploadingImage = false);
+        if (uploadedUrl != null) {
+          imageUrl = uploadedUrl;
+        } else {
+          setState(() => _error = 'Failed to upload image.');
+        }
+      }
       final data = {
         'name': _nameController.text.trim(),
         'description': _descController.text.trim(),
         'date': _selectedDate!.toIso8601String().split('T')[0],
         'time': _selectedTime!.format(context),
-        // ion know man im just taking a random image
         'imageUrl': imageUrl.isNotEmpty ? imageUrl : "https://www.fristads.com/images/broken.jpg?fileId=00754ec2-7679-450d-a81b-81c2c96bdea4&croppingId=ec921afa-9940-4fa3-a7a6-268fd649e17c",
         'location': _locationController.text.trim(),
         'organizers': _organizerController.text.trim(),
@@ -144,7 +171,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _organizerController,
-                decoration: const InputDecoration(labelText: 'Organizers'),
+                decoration: const InputDecoration(labelText: 'Main Organizer'),
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
@@ -166,9 +193,9 @@ class _CreateEventPageState extends State<CreateEventPage> {
                         ),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
-                    onPressed: _pickImage,
+                    onPressed: _isUploadingImage ? null : _pickImage,
                     icon: const Icon(Icons.upload),
-                    label: const Text('Pick Image'),
+                    label: _isUploadingImage ? const Text('Uploading...') : const Text('Pick Image'),
                   ),
                 ],
               ),
@@ -176,7 +203,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
               CheckboxListTile(
                 value: _agreed,
                 onChanged: (v) => setState(() => _agreed = v ?? false),
-                title: const Text('I confirm the event details are correct'),
+                title: const Text('I confirm the event details are correct and I bear responsibility for any verification issues that may arise.'),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               if (_error != null)

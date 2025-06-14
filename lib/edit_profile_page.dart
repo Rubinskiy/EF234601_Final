@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -17,6 +21,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   bool _isLoading = true;
   Map<String, dynamic> _userProfile = {};
+  File? _pickedImage;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -39,7 +45,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final doc = await _firestore.collection('users').doc(user.uid).get();
         if (doc.exists) {
           _userProfile = doc.data()!;
-          _nameController.text = _userProfile['displayName'] ?? '';
+          _nameController.text = _userProfile['name'] ?? '';
           _bioController.text = _userProfile['bio'] ?? '';
         }
       }
@@ -56,7 +62,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final user = _auth.currentUser;
       if (user != null) {
         final updates = {
-          'displayName': _nameController.text.trim(),
+          'name': _nameController.text.trim(),
           'bio': _bioController.text.trim(),
         };
         // Use set with merge:true to update or create fields
@@ -71,6 +77,53 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _showSnackBar('Failed to update profile: $e');
     } finally {
       if(mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _pickedImage = File(picked.path));
+      await _uploadProfileImage();
+    }
+  }
+
+  Future<void> _uploadProfileImage() async {
+    if (_pickedImage == null) return;
+    setState(() => _isUploadingImage = true);
+    try {
+      final url = await _uploadImageToCloudinary(_pickedImage!);
+      if (url != null) {
+        final user = _auth.currentUser;
+        if (user != null) {
+          await _firestore.collection('users').doc(user.uid).update({'pfp_url': url});
+          setState(() => _userProfile['pfp_url'] = url);
+        }
+      } else {
+        _showSnackBar('Failed to upload image.');
+      }
+    } catch (e) {
+      _showSnackBar('Image upload error: $e');
+    } finally {
+      setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<String?> _uploadImageToCloudinary(File imageFile) async {
+    const cloudName = 'dqfyez52e';
+    const uploadPreset = 'flutter_unsigned';
+    final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    final request = http.MultipartRequest('POST', url)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final respStr = await response.stream.bytesToString();
+      final data = json.decode(respStr);
+      return data['secure_url'];
+    } else {
+      return null;
     }
   }
 
@@ -114,10 +167,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 CircleAvatar(
                   radius: 60,
                   backgroundColor: Colors.orange,
-                  backgroundImage: _userProfile['photoURL'] != null && _userProfile['photoURL'].isNotEmpty
-                      ? NetworkImage(_userProfile['photoURL'])
+                  backgroundImage: _userProfile['pfp_url'] != null && _userProfile['pfp_url'].isNotEmpty
+                      ? NetworkImage(_userProfile['pfp_url'])
                       : null,
-                  child: _userProfile['photoURL'] == null || _userProfile['photoURL'].isEmpty
+                  child: _userProfile['pfp_url'] == null || _userProfile['pfp_url'].isEmpty
                       ? const Icon(Icons.person, size: 72, color: Colors.white)
                       : null,
                 ),
@@ -125,7 +178,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   bottom: 0,
                   right: 0,
                   child: GestureDetector(
-                    onTap: () => _showSnackBar('Photo upload coming soon!'),
+                    onTap: _isUploadingImage ? null : _pickProfileImage,
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -133,7 +186,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                      child: _isUploadingImage
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.camera_alt, size: 20, color: Colors.white),
                     ),
                   ),
                 ),

@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'models/event_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DetailsPage extends StatelessWidget {
   final EventModel event;
 
   const DetailsPage({super.key, required this.event});
 
+  Future<String?> getUsernameFromUID(String uid) async {
+    final user = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return user.data()?['name'];
+  }
+
+  Future<String?> getPhotoUrlFromUID(String uid) async {
+    final user = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return user.data()?['pfp_url'];
+  }
+
   @override
   Widget build(BuildContext context) {
     final imageUrl = event.toMap()['imageUrl'] ?? '';
     // Split date and time if possible
     String date = event.date;
-    String time = '';
+    String time = event.time;
     if (event.date.contains('|')) {
       final parts = event.date.split('|');
       date = parts[0].trim();
@@ -68,38 +79,74 @@ class DetailsPage extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   event.description,
-                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                  style: const TextStyle(fontSize: 18, color: Colors.black87),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Date', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text(date, style: const TextStyle(fontSize: 15)),
-                        ],
-                      ),
+                    Text('Created By', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 14)),
+                    const SizedBox(width: 8),
+                    FutureBuilder<String?>(
+                      future: getPhotoUrlFromUID(event.createdBy),
+                      builder: (context, snapshot) {
+                        return snapshot.data != null ? CircleAvatar(
+                          backgroundImage: NetworkImage(snapshot.data ?? ''),
+                          radius: 10,
+                        ) : const SizedBox.shrink();
+                      },
                     ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Time', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text(time.isNotEmpty ? time : '-', style: const TextStyle(fontSize: 15)),
-                        ],
-                      ),
+                    const SizedBox(width: 8),
+                    FutureBuilder<String?>(
+                      future: getUsernameFromUID(event.createdBy),
+                      builder: (context, snapshot) {
+                        return Text(snapshot.data ?? 'Unknown User', style: const TextStyle(fontSize: 14, color: Colors.blueGrey));
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text('Location', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text(event.location, style: const TextStyle(fontSize: 15)),
-                const SizedBox(height: 32),
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Date', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        Text(date, style: const TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Time', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        Text(time.isNotEmpty ? time : '-', style: const TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Location', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        Text(event.location.length > 30 ? '${event.location.substring(0, 30)}...' : event.location, style: const TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // card for organizers
+                const Text('Organizers', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text(event.organizers),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

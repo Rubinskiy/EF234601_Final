@@ -67,7 +67,7 @@ class _HomePageState extends State<HomePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                event.organizers,
+                                "📍 ${event.location}",
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: Colors.blueGrey,
@@ -91,16 +91,33 @@ class _HomePageState extends State<HomePage> {
                                 style: const TextStyle(fontSize: 14, color: Colors.black54),
                               ),
                               const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: const Color(0xFFE8F0FE),
-                                ),
-                                child: Text(
-                                  event.date,
-                                  style: const TextStyle(fontSize: 13, color: Colors.blue),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFFE8F0FE),
+                                    ),
+                                    child: Text(
+                                      event.date,
+                                      style: const TextStyle(fontSize: 13, color: Colors.blue),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFFE8F0FE),
+                                    ),
+                                    child: Text(
+                                      event.time,
+                                      style: const TextStyle(fontSize: 13, color: Colors.blue),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
