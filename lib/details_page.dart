@@ -155,7 +155,7 @@ class DetailsPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Register', style: TextStyle(fontSize: 16)),
+                    child: const Text('Register for this event', style: TextStyle(fontSize: 16)),
                   ),
                 ),
               ],

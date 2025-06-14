@@ -6,16 +6,18 @@ import 'dart:io';
 import 'services/firestore_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'models/event_model.dart';
 import 'services/cloudinary_service.dart';
 
 class CreateEventPage extends StatefulWidget {
-  const CreateEventPage({super.key});
+  final EventModel? event; // <-- Tambah ini
+
+  const CreateEventPage({super.key, this.event});
 
   @override
   State<CreateEventPage> createState() => _CreateEventPageState();
 }
 
-// page form to create an event
 class _CreateEventPageState extends State<CreateEventPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -29,27 +31,51 @@ class _CreateEventPageState extends State<CreateEventPage> {
   bool _isLoading = false;
   String? _error;
   bool _isUploadingImage = false;
+  String _imageUrl = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.event != null) {
+      _nameController.text = widget.event!.name;
+      _descController.text = widget.event!.description;
+      _locationController.text = widget.event!.location;
+      _organizerController.text = widget.event!.organizers;
+      _selectedDate = DateTime.tryParse(widget.event!.date);
+      _selectedTime = _parseTime(widget.event!.time);
+      _imageUrl = widget.event!.imageUrl;
+    }
+  }
+
+  TimeOfDay? _parseTime(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length != 2) return null;
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (e) {
+      return null;
+    }
+  }
+
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020), //idk
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: _selectedTime ?? TimeOfDay.now(),
     );
-    if (picked != null) {
-      setState(() => _selectedTime = picked);
-    }
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
   Future<void> _pickImage() async {
@@ -66,14 +92,18 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || !_agreed || _selectedDate == null || _selectedTime == null) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
+
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) throw Exception('Not logged in');
-      String imageUrl = '';
+
+      String imageUrl = _imageUrl;
+
       if (_imageFile != null) {
         setState(() => _isUploadingImage = true);
         final uploadedUrl = await _uploadImageToCloudinary(_imageFile!);
@@ -84,29 +114,39 @@ class _CreateEventPageState extends State<CreateEventPage> {
           setState(() => _error = 'Failed to upload image.');
         }
       }
+
       final data = {
         'name': _nameController.text.trim(),
         'description': _descController.text.trim(),
         'date': _selectedDate!.toIso8601String().split('T')[0],
-        'time': _selectedTime!.format(context),
-        'imageUrl': imageUrl.isNotEmpty ? imageUrl : "https://www.fristads.com/images/broken.jpg?fileId=00754ec2-7679-450d-a81b-81c2c96bdea4&croppingId=ec921afa-9940-4fa3-a7a6-268fd649e17c",
+        'time': '${_selectedTime!.hour}:${_selectedTime!.minute}',
+        'imageUrl': imageUrl.isNotEmpty ? imageUrl : "https://www.fristads.com/images/broken.jpg",
         'location': _locationController.text.trim(),
         'organizers': _organizerController.text.trim(),
         'createdBy': userId,
         'createdAt': DateTime.now().toIso8601String(),
       };
-      await FirestoreService().addEvent(data);
+
+      if (widget.event == null) {
+        // Create
+        await FirestoreService().addEvent(data);
+      } else {
+        // Update
+        await FirestoreService().updateEvent(widget.event!.id, data);
+      }
+
       Navigator.pop(context);
     } catch (e) {
       setState(() => _error = e.toString());
     }
+
     setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Event')),
+      appBar: AppBar(title: Text(widget.event == null ? 'Create Event' : 'Edit Event')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -166,19 +206,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
               Row(
                 children: [
                   _imageFile != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(_imageFile!, width: 80, height: 80, fit: BoxFit.cover),
-                        )
-                      : Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.image, size: 32, color: Colors.grey),
-                        ),
+                      ? Image.file(_imageFile!, width: 80, height: 80, fit: BoxFit.cover)
+                      : imageUrlPreview(),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
                     onPressed: _isUploadingImage ? null : _pickImage,
@@ -191,12 +220,11 @@ class _CreateEventPageState extends State<CreateEventPage> {
               CheckboxListTile(
                 value: _agreed,
                 onChanged: (v) => setState(() => _agreed = v ?? false),
-                title: const Text('I confirm the event details are correct and I bear responsibility for any verification issues that may arise.'),
-                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text('I confirm the event details are correct.'),
               ),
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 8),
                   child: Text(_error!, style: const TextStyle(color: Colors.red)),
                 ),
               const SizedBox(height: 24),
@@ -206,7 +234,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
                   onPressed: _isLoading || !_agreed ? null : _submit,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Create Event'),
+                      : Text(widget.event == null ? 'Create Event' : 'Update Event'),
                 ),
               ),
             ],
@@ -215,4 +243,19 @@ class _CreateEventPageState extends State<CreateEventPage> {
       ),
     );
   }
-} 
+
+  Widget imageUrlPreview() {
+    if (_imageUrl.isNotEmpty) {
+      return Image.network(_imageUrl, width: 80, height: 80, fit: BoxFit.cover);
+    }
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.image, size: 32, color: Colors.grey),
+    );
+  }
+}
