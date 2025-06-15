@@ -104,6 +104,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
       String imageUrl = _imageUrl;
 
+// Upload image jika user memilih gambar baru
       if (_imageFile != null) {
         setState(() => _isUploadingImage = true);
         final uploadedUrl = await _uploadImageToCloudinary(_imageFile!);
@@ -112,8 +113,10 @@ class _CreateEventPageState extends State<CreateEventPage> {
           imageUrl = uploadedUrl;
         } else {
           setState(() => _error = 'Failed to upload image.');
+          imageUrl = _imageUrl; // fallback ke gambar lama kalau gagal upload
         }
       }
+
 
       final data = {
         'name': _nameController.text.trim(),
