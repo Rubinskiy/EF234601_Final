@@ -5,11 +5,129 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
-class DetailsPage extends StatelessWidget {
+class DetailsPage extends StatefulWidget {
   final EventModel event;
 
   const DetailsPage({super.key, required this.event});
+
+  @override
+  State<DetailsPage> createState() => _DetailsPageState();
+}
+
+class _DetailsPageState extends State<DetailsPage> {
+  bool _isLoading = false;
+  bool _isRegistered = false;
+  final _additionalInfoController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRegistrationStatus();
+  }
+
+  @override
+  void dispose() {
+    _additionalInfoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkRegistrationStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('registrations')
+          .doc('${user.uid}_${widget.event.id}')
+          .get();
+
+      if (mounted) {
+        setState(() => _isRegistered = doc.exists);
+      }
+    } catch (e) {
+      print('Error checking registration status: $e');
+    }
+  }
+
+  Future<void> _showRegistrationDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Register for Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Please provide any additional information for the event organizers:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _additionalInfoController,
+              decoration: const InputDecoration(
+                hintText: 'Additional information (optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _registerForEvent();
+            },
+            child: const Text('Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _registerForEvent() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to register for events')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('registrations')
+          .doc('${user.uid}_${widget.event.id}')
+          .set({
+        'userId': user.uid,
+        'eventId': widget.event.id,
+        'additionalInfo': _additionalInfoController.text.trim(),
+        'registeredAt': DateTime.now().toIso8601String(),
+      });
+
+      if (mounted) {
+        setState(() => _isRegistered = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully registered for the event!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error registering for event: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   Future<String?> getUsernameFromUID(String uid) async {
     final user = await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -37,11 +155,11 @@ class DetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = event.toMap()['imageUrl'] ?? '';
-    String date = event.date;
-    String time = event.time;
-    if (event.date.contains('|')) {
-      final parts = event.date.split('|');
+    final imageUrl = widget.event.toMap()['imageUrl'] ?? '';
+    String date = widget.event.date;
+    String time = widget.event.time;
+    if (widget.event.date.contains('|')) {
+      final parts = widget.event.date.split('|');
       date = parts[0].trim();
       time = parts.length > 1 ? parts[1].trim() : '';
     }
@@ -90,16 +208,16 @@ class DetailsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(event.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(widget.event.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                Text(event.description, style: const TextStyle(fontSize: 18, color: Colors.black87)),
+                Text(widget.event.description, style: const TextStyle(fontSize: 18, color: Colors.black87)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     const Text('Created By', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 14)),
                     const SizedBox(width: 8),
                     FutureBuilder<String?>(
-                      future: getPhotoUrlFromUID(event.createdBy),
+                      future: getPhotoUrlFromUID(widget.event.createdBy),
                       builder: (context, snapshot) {
                         return snapshot.data != null
                             ? CircleAvatar(backgroundImage: NetworkImage(snapshot.data ?? ''), radius: 10)
@@ -108,7 +226,7 @@ class DetailsPage extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     FutureBuilder<String?>(
-                      future: getUsernameFromUID(event.createdBy),
+                      future: getUsernameFromUID(widget.event.createdBy),
                       builder: (context, snapshot) {
                         return Text(snapshot.data ?? 'Unknown User', style: const TextStyle(fontSize: 14, color: Colors.blueGrey));
                       },
@@ -142,7 +260,7 @@ class DetailsPage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Location', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
-                        Text(event.location.length > 30 ? '${event.location.substring(0, 30)}...' : event.location, style: const TextStyle(fontSize: 18)),
+                        Text(widget.event.location.length > 30 ? '${widget.event.location.substring(0, 30)}...' : widget.event.location, style: const TextStyle(fontSize: 18)),
                       ],
                     ),
                   ],
@@ -151,7 +269,7 @@ class DetailsPage extends StatelessWidget {
                 const Text('Map Location', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 FutureBuilder<LatLng?>(
-                  future: getCoordinatesFromAddress(event.location),
+                  future: getCoordinatesFromAddress(widget.event.location),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const SizedBox(
@@ -196,19 +314,24 @@ class DetailsPage extends StatelessWidget {
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.person),
-                    title: Text(event.organizers),
+                    title: Text(widget.event.organizers),
                   ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _isRegistered || _isLoading ? null : _showRegistrationDialog,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Register for this event', style: TextStyle(fontSize: 16)),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            _isRegistered ? 'Already Registered' : 'Register for this event',
+                            style: const TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
               ],

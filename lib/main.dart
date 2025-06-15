@@ -73,16 +73,19 @@ class _MyAppState extends State<MyApp> {
       if (_showRegister) {
         return MaterialApp(
           home: RegisterPage(onLoginTap: _onShowLogin, onRegister: _onLogin),
+          debugShowCheckedModeBanner: false,
         );
       } else {
         return MaterialApp(
           home: LoginPage(onRegisterTap: _onShowRegister, onLogin: _onLogin),
+          debugShowCheckedModeBanner: false,
         );
       }
     }
 
     return MaterialApp(
       home: MainTabs(onLogout: _onLogout),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

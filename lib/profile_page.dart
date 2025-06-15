@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'services/cloudinary_service.dart';
+import 'registered_events_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
@@ -255,7 +256,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     leading: const Icon(Icons.event, color: Colors.blue),
                     title: const Text('Registered Events'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _showSnackBar('Events feature coming soon!'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegisteredEventsPage()),
+                      );
+                    },
                   ),
                   // ... other event items
                 ],
