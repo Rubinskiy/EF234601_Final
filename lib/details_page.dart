@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'models/event_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class DetailsPage extends StatelessWidget {
   final EventModel event;
@@ -17,10 +21,23 @@ class DetailsPage extends StatelessWidget {
     return user.data()?['pfp_url'];
   }
 
+  Future<LatLng?> getCoordinatesFromAddress(String address) async {
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$address&format=json&limit=1');
+    final response = await http.get(url, headers: {'User-Agent': 'campus_event_tracker/1.0'});
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data.isNotEmpty) {
+        final lat = double.parse(data[0]['lat']);
+        final lon = double.parse(data[0]['lon']);
+        return LatLng(lat, lon);
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final imageUrl = event.toMap()['imageUrl'] ?? '';
-    // Split date and time if possible
     String date = event.date;
     String time = event.time;
     if (event.date.contains('|')) {
@@ -28,6 +45,7 @@ class DetailsPage extends StatelessWidget {
       date = parts[0].trim();
       time = parts.length > 1 ? parts[1].trim() : '';
     }
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -72,27 +90,20 @@ class DetailsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.name,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
+                Text(event.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                Text(
-                  event.description,
-                  style: const TextStyle(fontSize: 18, color: Colors.black87),
-                ),
+                Text(event.description, style: const TextStyle(fontSize: 18, color: Colors.black87)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('Created By', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 14)),
+                    const Text('Created By', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 14)),
                     const SizedBox(width: 8),
                     FutureBuilder<String?>(
                       future: getPhotoUrlFromUID(event.createdBy),
                       builder: (context, snapshot) {
-                        return snapshot.data != null ? CircleAvatar(
-                          backgroundImage: NetworkImage(snapshot.data ?? ''),
-                          radius: 10,
-                        ) : const SizedBox.shrink();
+                        return snapshot.data != null
+                            ? CircleAvatar(backgroundImage: NetworkImage(snapshot.data ?? ''), radius: 10)
+                            : const SizedBox.shrink();
                       },
                     ),
                     const SizedBox(width: 8),
@@ -110,7 +121,7 @@ class DetailsPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Date', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        const Text('Date', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
                         Text(date, style: const TextStyle(fontSize: 18)),
                       ],
                     ),
@@ -120,7 +131,7 @@ class DetailsPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Time', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        const Text('Time', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
                         Text(time.isNotEmpty ? time : '-', style: const TextStyle(fontSize: 18)),
                       ],
                     ),
@@ -130,14 +141,56 @@ class DetailsPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Location', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
+                        const Text('Location', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500, fontSize: 18)),
                         Text(event.location.length > 30 ? '${event.location.substring(0, 30)}...' : event.location, style: const TextStyle(fontSize: 18)),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                // card for organizers
+                const Text('Map Location', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                FutureBuilder<LatLng?>(
+                  future: getCoordinatesFromAddress(event.location),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        height: 200,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    } else if (snapshot.hasData && snapshot.data != null) {
+                      return SizedBox(
+                        height: 200,
+                        child: FlutterMap(
+                          options: MapOptions(
+                            center: snapshot.data!,
+                            zoom: 15.0,
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              subdomains: ['a', 'b', 'c'],
+                              userAgentPackageName: 'com.example.final_project',
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: snapshot.data!,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      return const Text('Lokasi tidak ditemukan di peta.');
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
                 const Text('Main Organizer', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Card(
