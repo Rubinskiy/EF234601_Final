@@ -167,12 +167,6 @@ class _DetailsPageState extends State<DetailsPage> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
-          ),
-        ],
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0.5,

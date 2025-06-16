@@ -64,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Login', style: Theme.of(context).textTheme.headlineMedium),
+                Text('CampusTracker', style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _emailController,
@@ -82,8 +82,17 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _signIn,
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Login'),
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Color.fromARGB(255, 116, 17, 111),
+                              strokeWidth: 4,
+                              value: null,
+                              semanticsLabel: 'Linear progress indicator',
+                            ),
+                          )
+                        : const Text('Login', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
                 const SizedBox(height: 16),
