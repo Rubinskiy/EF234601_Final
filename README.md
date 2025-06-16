@@ -20,17 +20,26 @@ These generated designs are purely for inspiration to mimic on our app. View the
 ## Week 2
 Week 2 we started the development of the app and created the basic structure (auth using Firebase), implementation of UI from Figma.
 
+<img src="https://github.com/user-attachments/assets/0558f898-2fe6-40dc-a232-45c70fff4fbc" width="300" />
+
+<img src="https://github.com/user-attachments/assets/7890bb84-9b8e-453a-8880-5693ff333cb8" width="300" />
+
+
 ## Week 3
 Week 3 is where we added Firestore to create our collection of events, and used CRUD to create them, display and delete. We also added the ability to edit events and add images which we store on a third-party image storage service called Cloudinary. At this point we have completed half of the screens and functionality of the app. We stuck with a very minimalistic design and is not entirely aligned with the UI from Figma, regardless, we think the functionality is far more important.
 
-![image](https://github.com/user-attachments/assets/009d6cf8-4b02-44fa-8538-98708dd17214)
+<img src="https://github.com/user-attachments/assets/95f4707a-b73d-405f-b1a1-6d3ea4ec8163" width="300" />
 
+<img src="https://github.com/user-attachments/assets/ac6516ad-3c00-4b06-81b5-18d33d847a2f" width="300" />
 
+<img src="https://github.com/user-attachments/assets/426a8728-30ef-471e-a59e-0a27fbcb755a" width="300" />
 
 ## Week 4
-Week 4 is where we finalized the app, added the ability to register for events, and display them in a list. We updated our Firestore database to have about 3 documents and number of collections inside of them used for "events", "users", and "registrations". The app is now fully functional and ready for submission.
+Week 4 is where we finalized the app, added the ability to register for events, and display them in a list. We updated our Firestore database to have about 3 documents and number of collections inside of them used for "events", "users", and "registrations". The app is now fully functional and ready for submission. For our CI/CD the reason why we didn't include a build for Android and iOS is that the build time takes > 5 minutes, which might delay us from making a quick pull request.
 
+<img src="https://github.com/user-attachments/assets/9302d501-4940-4182-af44-2c0acb7b2b8a" width="300" />
 
+<img src="https://github.com/user-attachments/assets/9e65abb8-1d60-4a3a-a3ee-734b24000364" width="300" />
 
 ## Contribution
 All code was written by the three of us, and we used GitHub to manage our code. We also used GitHub Issues to track our progress and tasks.
@@ -40,6 +49,7 @@ All code was written by the three of us, and we used GitHub to manage our code. 
 - CRUD for registrations
 - Setup Firebase, Firestore
 - Cloudinary integration
+- CI/CD for test and analyze
 
 **Parisya**: 
 - Created the UI
@@ -53,4 +63,4 @@ All code was written by the three of us, and we used GitHub to manage our code. 
 - Created the UI
 - Firestore integration
 - CRUD for user profile
-- splash screen
+- Splash screen
