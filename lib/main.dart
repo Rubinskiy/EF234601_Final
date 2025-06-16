@@ -8,8 +8,6 @@ import 'register_page.dart';
 import 'home_page.dart';
 import 'profile_page.dart';
 import 'my_events.dart';
-import 'models/event_model.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
