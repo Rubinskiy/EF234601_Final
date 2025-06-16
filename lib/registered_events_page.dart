@@ -14,7 +14,7 @@ class RegisteredEventsPage extends StatelessWidget {
         return EventModel.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
-      print('Error fetching event details: $e');
+      // error fetching event details
     }
     return null;
   }
